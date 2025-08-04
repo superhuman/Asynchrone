@@ -106,7 +106,7 @@ extension DebounceAsyncSequence {
                 self.resultTask = nil
 
                 let sleep = Task<RaceResult, Never> { [dueTime] in
-                    try? await Task.sleep(nanoseconds: UInt64(Swift.max(dueTime, 0)) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: UInt64(Swift.max(dueTime, 0)) * NSEC_PER_SEC)
                     return .sleep
                 }
 
