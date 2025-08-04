@@ -92,8 +92,7 @@ extension DebounceAsyncSequence {
         
         public mutating func next() async rethrows -> Element? {
             var lastResult: Result<Element?, Error>?
-            var lastEmission: Date = .init()
-            
+
             while true {
                 let resultTask = self.resultTask ?? Task<RaceResult, Never> { [base] in
                     var iterator = base
@@ -105,14 +104,12 @@ extension DebounceAsyncSequence {
                     }
                 }
                 self.resultTask = nil
-                
-                lastEmission = Date()
-                let delay = UInt64(self.dueTime - Date().timeIntervalSince(lastEmission)) * 1_000_000_000
-                let sleep = Task<RaceResult, Never> {
-                    try? await Task.sleep(nanoseconds: delay)
+
+                let sleep = Task<RaceResult, Never> { [dueTime] in
+                    try? await Task.sleep(nanoseconds: UInt64(Swift.max(dueTime, 0)) * NSEC_PER_SEC)
                     return .sleep
                 }
-                
+
                 let tasks = [resultTask, sleep]
                 let firstTask = await { () async -> Task<RaceResult, Never> in
                     let raceCoordinator = TaskRaceCoodinator<RaceResult, Never>()
@@ -140,7 +137,6 @@ extension DebounceAsyncSequence {
                 switch await firstTask.value {
                 case .winner(let result, let iterator):
                     lastResult = result
-                    lastEmission = Date()
                     self.base = iterator
                     
                     switch result {
